@@ -1,0 +1,149 @@
+{% extends "magazine/layout.html" %}
+
+{% load static %}
+
+{% block title %}
+Gresham's Archive
+{% endblock %}
+
+{% block content %}
+<body>
+    <div>
+        <input type="hidden" id="results-var" name="variable" value="{{ results }}" readonly>
+        <input type="hidden" id="years-var" name="variable" value="{{ years }}" readonly>
+        <input type="hidden" id="months-var" name="variable" value="{{ months }}" readonly>
+        <input type="hidden" id="days-var" name="variable" value="{{ days }}" readonly>
+        <input type="hidden" id="volumes-var" name="variable" value="{{ volumes }}" readonly>
+        <input type="hidden" id="numbers-var" name="variable" value="{{ numbers }}" readonly>
+    </div>
+
+    <span class="main">
+
+        <span class="title-banner">
+            The Gresham Magazine Archive
+        </span>
+
+        <span>
+            <button id="admin-link" class="hover-cursor">Admin</button>
+        </span>
+
+        <div id="current-display">
+
+        </div>
+
+        <div class="search-section">
+            <span id="year-search">
+                <select id="years" class="select-search hover-cursor">
+                    <option value="all">Year</option>
+                    {% for year in years %}
+                    <option value="{{year}}" id="year-{{year}}" class="search-option year">{{year}}</option>
+                    {% endfor %}
+                </select>
+            </span>
+
+            <span id="month-search">
+                <select id="months" class="select-search hover-cursor">
+                    <option value="all">Month</option>
+                    {% for month in months %}
+                    <option value="{{month}}" id="month-{{month}}" class="search-option month">{{month}}</option>
+                    {% endfor %}
+                </select>
+            </span>
+
+            <span id="day-search">
+                <select id="days" class="select-search hover-cursor">
+                    <option value="all">Day</option>
+                    {% for day in days %}
+                    <option value="{{day}}" id="day-{{day}}" class="search-option day">{{day}}</option>
+                    {% endfor %}
+                </select>
+            </span>
+
+            <span id="volume-search">
+                <select id="volumes" class="select-search hover-cursor">
+                    <option value="all">Volume</option>
+                    {% for volume in volumes %}
+                    <option value="{{volume}}" id="volume-{{volume}}" class="search-option volume">{{volume}}</option>
+                    {% endfor %}
+                </select>
+            </span>
+
+            <span id="number-search">
+                <select id="numbers" class="select-search hover-cursor">
+                    <option value="all">Number</option>
+                    {% for number in numbers %}
+                    <option value="{{number}}" id="number-{{number}}" class="search-option number">{{number}}</option>
+                    {% endfor %}
+                </select>
+            </span>
+
+            <span id="key-word-search">
+                    <input type="text" placeholder="key words" id="keywords">
+            </span>
+
+        </div>
+
+        <span class="search-section">
+            <button id="reset-search" class="hover-cursor">Reset</button>
+        </span>
+
+        <span class="search-section">
+            <button id="download-files" class="hover-cursor">Download</button>
+        </span>
+
+        <span class="search-section">
+            <button id="run-key-word-search" class="hover-cursor">Run Keyword Search</button>
+        </span>
+
+        <span class="search-section" id="error-msg-download">
+            Please select a record
+        </span>
+        <h2>Results</h2>
+        <div class="wrapper">
+            <table class="table">
+                <tr class="table-row">
+                    <th class="table-column">Year</th>
+                    <th class="table-column">Month</th>
+                    <th class="table-column">Day</th>
+                    <th class="table-column">Volume</th>
+                    <th class="table-column">Number</th>
+                    <th class="table-column"></th>
+                    <th class="table-column"><input type="checkbox" id="select-all" class="hover-cursor"></th>
+                </tr>
+                {% for item in results %}
+                <tr class="table-row" id="row-{{item.1}}-{{item.2}}">
+                    <td class="table-column year-column">{{ item.0.year }}</td>
+                    <td class="table-column month-column">{{ item.0.month }}</td>
+                    <td class="table-column day-column">{{ item.0.day }}</td>
+                    <td class="table-column volume-column">{{ item.1 }}</td>
+                    <td class="table-column number-column">{{ item.2 }}</td>
+                    <td class="show-table-data">
+                        <a href="/magazine/{{item.1}}-{{item.2}}"><button class="show hover-cursor">show</button></a>
+                    </td>
+                    <td>
+                        <input type="checkbox" class="download-check hover-cursor" name="{{item.1}}-{{item.2}}">
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <div id="pages">
+            </div>
+        </div>
+    </span>
+    {% if pdf %}
+    <span class="pdfview">
+        {% static "" as static_url %}
+        <embed id="pdf-embed" src="{{static_url}}magazine/temp/{{pdf}}.pdf" width="100%" height="100%"
+            type="application/pdf" />
+    </span>
+    {% endif %}
+    <form id="download-arr-form" action="/magazine/downloadArr" method="post">
+        {% csrf_token %}
+    </form>
+    <form id="keyword-form" method="post">
+        {% csrf_token %}
+    </form>
+
+</body>
+<script src="{% static 'magazine/script.js' %}"></script>
+{% endblock %}

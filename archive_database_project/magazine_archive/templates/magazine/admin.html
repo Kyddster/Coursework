@@ -1,0 +1,54 @@
+{% extends "magazine/layout.html" %}
+{% load static %}
+
+{% block title %}
+Gresham's Archive | Admin
+{% endblock %}
+
+{% block content %}
+<body>
+    <h2>Add Record</h2>
+    <div style="padding-left: 10px"><a href="/">back</a></div>
+    <br>
+    <div class="add-record">
+        <form action="/magazine/admin" method="post" enctype="multipart/form-data" id="upload-form">
+            {% csrf_token %}
+            <input type="hidden" class="record-input" name="type" value="file">
+            <input type="text" class="record-input" placeholder="date: YYYY-MM-DD" name="date" required>
+            <input type="number" class="record-input" placeholder="volume" min="1" max="99" name="volume" id="number-input" required>
+            <input type="number" class="record-input" placeholder="number" min="1" max="99" name="number" id="number-input" required>
+            <input type="file" class="record-input" name="file" id="file-input" required>
+            <br><br>
+            <input type="submit" value="Add record">
+            <button id="reset-admin">reset</button>
+        </form>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-msg">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <h2>Records</h2>
+    <div class="table">
+        <table>
+            <tr class="table-row">
+                <th class="table-column">Year</th>
+                <th class="table-column">Month</th>
+                <th class="table-column">Day</th>
+                <th class="table-column">Volume</th>
+                <th class="table-column">Number</th>
+            </tr>
+            {% for item in results %}
+            <tr class="table-row" id="row-{{item.1}}-{{item.2}}">
+                <td class="table-column year-column">{{ item.0.year }}</td>
+                <td class="table-column month-column">{{ item.0.month }}</td>
+                <td class="table-column day-column">{{ item.0.day }}</td>
+                <td class="table-column volume-column">{{ item.1 }}</td>
+                <td class="table-column number-column">{{ item.2 }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+<script src="{% static 'magazine/adminscript.js' %}"></script>
+{% endblock %}

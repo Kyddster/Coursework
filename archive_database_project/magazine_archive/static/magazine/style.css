@@ -1,0 +1,118 @@
+html {
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100%;
+    overflow: hidden;
+}
+
+.hover-cursor:hover {
+    cursor: pointer;
+}
+
+select option:hover {
+    cursor: pointer;
+}
+body {
+    margin: 0;
+    height: 100%;
+}
+
+h2 {
+    margin-left: 10px;
+}
+
+#current-display {
+    margin-left: 10px;
+}
+
+.main {
+    float: left;
+    height: 100%;
+    width: 50%;
+}
+
+.title-banner {
+    font-size: 30px;
+    white-space: nowrap;
+    padding: 10px;
+}
+
+.pdfview {
+    float: right;
+    height: 100%;
+    width: 50%;
+    position: fixed;
+}
+
+.search-section {
+    margin: 5px;
+    padding: 10px;
+}
+
+#day-search {
+    margin-right: 20px;
+}
+
+.table {
+    margin-left: 10px;
+}
+
+.show-table-data {
+    padding: 0;
+}
+
+.show {
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border: none;
+}
+
+table, th, td {
+    border:1px solid gray;
+    border-collapse:collapse;
+    padding: 3px;
+}
+
+#error-msg-download {
+    display: none;
+    color: #ff0000;
+}
+
+#key-word-search {
+    margin-left: 20px;
+}
+
+.center {
+    text-align: center;
+}
+
+.login-box {
+    padding: 5%;
+}
+
+.admin-title {
+    padding-top: 10%;
+}
+
+.input-box {
+    width: 200px;
+}
+
+.error-msg {
+    color: #ff0000;
+}
+
+.anchor {
+    text-decoration: none;
+}
+
+.add-record {
+    padding-left: 10px;
+}
+
+.wrapper {
+    display: flex;
+}
+
+#pages {
+    padding-left: 10px;
+}
