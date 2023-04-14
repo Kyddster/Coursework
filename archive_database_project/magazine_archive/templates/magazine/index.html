@@ -78,8 +78,16 @@ Gresham's Archive
             </span>
 
             <span id="key-word-search">
-                    <input type="text" placeholder="key words" id="keywords">
+                <input type="text" placeholder="keywords" id="keywords">
             </span>
+
+            {% if pdf %}
+            <span>
+                <select id="language-select" name="language">
+                    <option value="" disabled selected>language</option>
+                </select>
+            </span>
+            {% endif %}
 
         </div>
 
@@ -94,6 +102,12 @@ Gresham's Archive
         <span class="search-section">
             <button id="run-key-word-search" class="hover-cursor">Run Keyword Search</button>
         </span>
+
+        {% if pdf %}
+        <span class="search-section">
+            <button id="run-language-select" class="hover-cursor">download translated</button>
+        </span>
+        {% endif %}
 
         <span class="search-section" id="error-msg-download">
             Please select a record
@@ -141,6 +155,9 @@ Gresham's Archive
         {% csrf_token %}
     </form>
     <form id="keyword-form" method="post">
+        {% csrf_token %}
+    </form>
+    <form id="language-form" action="/magazine/downloadTranslated" method="post">
         {% csrf_token %}
     </form>
 

@@ -13,6 +13,8 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'archive_database.settings')
 
 from django.db import connections
 
+from google.cloud import translate_v2 as translate
+
 
 def convertToBinaryData(volume, number, path):
     with open(f'{path}{volume}-{number}.pdf', 'rb') as file:
@@ -151,14 +153,16 @@ def read_pdf():
                         word = word.replace(letter, '')
 
                 with connections['default'].cursor() as cursor:
-                    sql = f'INSERT INTO keywords (volume, number, page, word) VALUES ("{key[0]}", "{key[1]}", "{i+1}", "{word}")'
+                    sql = f'SELECT recordID FROM magazines WHERE volume = {key[0]} AND number = {key[1]}'
+                    cursor.execute(sql)
+                    record = cursor.fetchone()[0]
+
+                with connections['default'].cursor() as cursor:
+                    sql = f'INSERT INTO keywords (recordID, page, word) VALUES ("{record}", "{i+1}", "{word}")'
                     try:
                         cursor.execute(sql)
                         connections['default'].commit()
-
                     except Exception as e:
-                        print(sql)
-                        print(word)
                         print(e)
 
             os.remove(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg')
@@ -180,34 +184,69 @@ def read_pdf_individual(volume, number):
                     word = word.replace(letter, '')
 
             with connections['default'].cursor() as cursor:
-                sql = f'INSERT INTO keywords (volume, number, page, word) VALUES ("{volume}", "{number}", "{i+1}", "{word}")'
+                sql = f'SELECT recordID FROM magazines WHERE volume = {volume} AND number = {number}'
+                cursor.execute(sql)
+                record = cursor.fetchone()[0]
+
+            with connections['default'].cursor() as cursor:
+                sql = f'INSERT INTO keywords (recordID, page, word) VALUES ("{record}", "{i+1}", "{word}")'
                 try:
                     cursor.execute(sql)
                     connections['default'].commit()
-
                 except Exception as e:
-                    print(sql)
-                    print(word)
                     print(e)
 
-            os.remove(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg')
+        os.remove(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg')
+
+def read_pdf_individual_translate(volume, number, endLang, ogLang='en'):
+    pdf = f'{volume}-{number}.pdf'
+    pages = convert_from_path(f'magazine_archive/static/magazine/temp/{pdf}', 300)
+
+    translatedText = ''
+
+    for i, page in enumerate(pages):
+        page.save(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg', 'JPEG')
+        img = cv.imread(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg')
+        img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+
+        text = pytesseract.image_to_string(img_gray)
+
+        client = translate.Client()
+
+        result = client.translate(text, source_language=ogLang, target_language=endLang)
+        translatedText += result['translatedText']
+
+        os.remove(f'magazine_archive/static/magazine/temp/temp_img/{i}.jpg')
+    return translatedText
+
 
 def getKeywords(keywordArr):
     with connections['default'].cursor() as cursor:
 
-        placeholders = ', '.join(['%s'] * len(keywordArr))
-
-        # format the query
         query = f'''
-            SELECT volume, number, page
-            FROM keywords
-            WHERE word IN ({placeholders})
-            GROUP BY volume, number, page
-            HAVING COUNT(DISTINCT word) = {len(keywordArr)}
+            SELECT magazines.volume, magazines.number, keywords.page
+            FROM keywords, magazines
+            JOIN magazines ON keywords.recordID = magazines.recordID
+            WHERE keywords.word IN ({', '.join(['%s'] * len(keywordArr))})
+            GROUP BY magazines.volume, magazines.number, keywords.page
+            HAVING COUNT(DISTINCT keywords.word) = {len(keywordArr)}
         '''
-        # fetch the results
         cursor.execute(query, keywordArr)
         results = cursor.fetchall()
         
         return results
+    
+def set_password(email, password):
+    with connections['default'].cursor() as cursor:
+        sql = f'''
+            UPDATE admin
+            SET password = '{password}'
+            WHERE email = '{email}'
+        '''
+        try:
+            cursor.execute(sql)
+            connections['default'].commit()
+        except Exception as e:
+            print(e)
 
+    

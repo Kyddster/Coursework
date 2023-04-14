@@ -16,7 +16,7 @@ Including another URLconf
 from django.urls import path, include
 from django.shortcuts import redirect
 
-def redirect_home():
+def redirect_home(request):
     return redirect('m_index')
 
 urlpatterns = [

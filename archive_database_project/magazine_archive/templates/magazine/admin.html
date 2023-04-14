@@ -14,9 +14,9 @@ Gresham's Archive | Admin
         <form action="/magazine/admin" method="post" enctype="multipart/form-data" id="upload-form">
             {% csrf_token %}
             <input type="hidden" class="record-input" name="type" value="file">
-            <input type="text" class="record-input" placeholder="date: YYYY-MM-DD" name="date" required>
-            <input type="number" class="record-input" placeholder="volume" min="1" max="99" name="volume" id="number-input" required>
-            <input type="number" class="record-input" placeholder="number" min="1" max="99" name="number" id="number-input" required>
+            <input type="text" class="record-input" id="date-input" placeholder="date: YYYY-MM-DD" name="date" required>
+            <input type="number" class="record-input" placeholder="volume" min="1" name="volume" id="number-input" required>
+            <input type="number" class="record-input" placeholder="number" min="1" name="number" id="number-input" required>
             <input type="file" class="record-input" name="file" id="file-input" required>
             <br><br>
             <input type="submit" value="Add record">

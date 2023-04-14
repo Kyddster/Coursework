@@ -6,7 +6,7 @@ class LogoutOnPageChangeMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if request.user.is_authenticated and not request.path in ['/magazine/admin', '/magazine/login']:
+        if request.user.is_authenticated and not request.path in ['/magazine/admin', '/magazine/login', '/magazine/keywords', '/favicon.ico']:
             logout(request)
 
         return response
