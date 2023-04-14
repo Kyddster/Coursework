@@ -121,7 +121,7 @@ def m_getkeywords(request):
     '''
     runs when url is '/magazine/keywords'
 
-    uses form POST data to get list of keywords
+    uses form POST data to get list of records
     '''
     keywordArr = request.POST['keywordArr']
     if ',' not in keywordArr:
@@ -142,7 +142,7 @@ def m_downloadTranslated(request):
     '''
     runs when url is '/magazine/downloadTranslated'
 
-
+    downloads translated version of document as plaintext
     '''
     try:
         os.remove('magazine_archive/static/magazine/temp/temp_file/translated_text.txt')
@@ -162,6 +162,11 @@ def m_downloadTranslated(request):
 
 
 def m_forgot_password(request):
+    '''
+    runs when url is '/magazine/forgot-password'
+
+    uses a form to get email address and then send 'reset-password' email if email address is in admin table
+    '''
     if request.method == 'POST':
         email = request.POST['email']
         user = User.objects.filter(email=email).first()
@@ -183,6 +188,11 @@ def m_forgot_password(request):
 
 
 def m_reset_password(request, uid, uidb64, token):
+    '''
+    runs when url is '/magazine/reset-password/<token>
+
+    allows user to reset password if token is still valid
+    '''
     print(uid, uidb64, token)
     try:
         user = User.objects.filter(id=int(uid)).first()
