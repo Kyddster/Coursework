@@ -1,17 +1,17 @@
 import os
 import zipfile as zf
-import hashlib
-
 import cv2 as cv
 import pytesseract
 from pdf2image import convert_from_path
+import re
+# re library from here:
+# https://www.w3schools.com/python/python_regex.asp
 
 import os
 from django.conf import settings
+from django.db import connections
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'archive_database.settings')
-
-from django.db import connections
 
 from google.cloud import translate_v2 as translate
 
@@ -47,7 +47,11 @@ def exportBLOB(volume, number, path):
         convertToFileData(volume, number, result[0], path)
 
 
-def exportAll():
+def export_all():
+    '''
+    used when PDFs are being exported from the database to file form
+    when the application is first run
+    '''
     with connections['default'].cursor() as cursor:
         sql = 'SELECT volume, number, data FROM magazines'
         cursor.execute(sql)
@@ -57,7 +61,12 @@ def exportAll():
             convertToFileData(record[0], record[1], record[2], 'magazine_archive/static/magazine/temp/')
 
 
-def createZip(pdfArr):
+def create_zip(pdfArr):
+    '''
+    used when downloading multiple records
+    '''
+    # Original code that I modified:
+    # https://stackoverflow.com/questions/1855095/how-to-create-a-zip-archive-of-a-directory
     root = 'magazine_archive/static/magazine/temp/'
     
     with zf.ZipFile(f'{root}magazines.zip', 'w', zf.ZIP_DEFLATED) as zfile:
@@ -67,7 +76,11 @@ def createZip(pdfArr):
                 zfile.write(os.path.join(root, file), file)
 
 
-def getInfo():
+def get_info():
+    '''
+    gets information from the magazines table that is used to help build
+    the table in the base and admin routes.
+    '''
     with connections['default'].cursor() as cursor:
         sql = 'SELECT date, volume, number FROM magazines'
         cursor.execute(sql)
@@ -116,25 +129,45 @@ def getInfo():
             'volumes': volumes,
             'numbers': numbers
         }
+        # easier on the template if i have all the fields as seperate variables
         return result
 
 
-# def get_login(email, password):
-#     with connections['default'].cursor() as cursor:
-#         sql = 'SELECT email, password FROM admin'
-#         cursor.execute(sql)
-#         result = cursor.fetchall()
-#         return (email, password) in result
-
-
-def create_login(firstname, lastname, email, password):
+def get_login(email):
     with connections['default'].cursor() as cursor:
-        password = hashlib.sha512(password.encode()).hexdigest()
-        sql = f"INSERT INTO admin (id,firstname,lastname,email,password) VALUES (NULL, '{firstname}', '{lastname}', '{email}', '{password}')"
+        sql = f"SELECT * FROM admin WHERE email = '{email}'"
         cursor.execute(sql)
-        connections['default'].commit()
+        result = cursor.fetchone()
+        return result
 
-def read_pdf():
+
+# def create_login(firstname, lastname, email, password):
+#     with connections['default'].cursor() as cursor:
+#         password = hashlib.sha512(password.encode()).hexdigest()
+#         sql = f"INSERT INTO admin (firstname,lastname,email,password) VALUES ('{firstname}', '{lastname}', '{email}', '{password}')"
+#         cursor.execute(sql)
+#         connections['default'].commit()
+
+
+def check_record(volume, number):
+    with connections['default'].cursor() as cursor:
+        sql = f'SELECT EXISTS(SELECT 1 FROM magazines WHERE volume = {volume} AND number = {number})'
+        cursor.execute(sql)
+        result = cursor.fetchone()[0]
+        return (result == 1)
+
+
+def check_email(email):
+    with connections['default'].cursor() as cursor:
+        # learnt about the EXISTS statement from here:
+        # https://www.w3schools.com/sql/sql_exists.asp
+        sql = f"SELECT EXISTS(SELECT 1 FROM admin WHERE email = '{email}')"
+        cursor.execute(sql)
+        result = cursor.fetchone()[0]
+        return (result == 1)
+
+
+def read_pdf_all():
     for pdf in os.listdir('magazine_archive/static/magazine/temp/'):
         if not pdf.endswith('.pdf'): continue
         pages = convert_from_path(f'magazine_archive/static/magazine/temp/{pdf}', 300)
@@ -146,12 +179,9 @@ def read_pdf():
             img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
             text = pytesseract.image_to_string(img_gray)
-            text = text.split(' ')
+            text = re.sub(r'[^\w\s\n]', '', text)
+            text = re.split(r'\s+|\n+', text)
             for word in text:
-                for letter in word:
-                    if letter in [',','.',';',':',')','(','"','\n','”','“','\\']:
-                        word = word.replace(letter, '')
-
                 with connections['default'].cursor() as cursor:
                     sql = f'SELECT recordID FROM magazines WHERE volume = {key[0]} AND number = {key[1]}'
                     cursor.execute(sql)
@@ -177,12 +207,9 @@ def read_pdf_individual(volume, number):
         img_gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
 
         text = pytesseract.image_to_string(img_gray)
-        text = text.split(' ')
+        text = re.sub(r'[^\w\s\n]', '', text)
+        text = re.split(r'\s+|\n+', text)
         for word in text:
-            for letter in word:
-                if letter in [',','.',';',':',')','(','"','\n','”','“','\\']:
-                    word = word.replace(letter, '')
-
             with connections['default'].cursor() as cursor:
                 sql = f'SELECT recordID FROM magazines WHERE volume = {volume} AND number = {number}'
                 cursor.execute(sql)
@@ -220,17 +247,21 @@ def read_pdf_individual_translate(volume, number, endLang, ogLang='en'):
     return translatedText
 
 
-def getKeywords(keywordArr):
+def get_keywords(keywordArr):
     with connections['default'].cursor() as cursor:
-
         query = f'''
             SELECT magazines.volume, magazines.number, keywords.page
-            FROM keywords, magazines
+            FROM keywords
             JOIN magazines ON keywords.recordID = magazines.recordID
             WHERE keywords.word IN ({', '.join(['%s'] * len(keywordArr))})
             GROUP BY magazines.volume, magazines.number, keywords.page
             HAVING COUNT(DISTINCT keywords.word) = {len(keywordArr)}
         '''
+        # GROUP BY, HAVING COUNT and DISTINCT statemets from:
+        # https://www.w3schools.com/sql/sql_groupby.asp
+        # https://www.w3schools.com/sql/sql_having.asp
+        # https://www.w3schools.com/sql/sql_distinct.asp
+
         cursor.execute(query, keywordArr)
         results = cursor.fetchall()
         
@@ -246,7 +277,9 @@ def set_password(email, password):
         try:
             cursor.execute(sql)
             connections['default'].commit()
+            return True
         except Exception as e:
             print(e)
+            return False
 
     

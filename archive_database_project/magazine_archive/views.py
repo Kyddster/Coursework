@@ -28,7 +28,7 @@ def m_index(request, pdf=None):
     if a record has been selected from the table, this will
     render that record aswell
     '''
-    tableData = fc.getInfo()
+    tableData = fc.get_info()
 
     return render(request, 'magazine/index.html', {
         'pdf': pdf,
@@ -47,6 +47,7 @@ def m_download(request, pdf):
 
     opens a new tab and downloads the record <pdf> to the end-user's system
     '''
+    # FileResponse from https://docs.djangoproject.com/en/4.2/ref/request-response/
     return FileResponse(open(f'magazine_archive/static/magazine/temp/{pdf}.pdf', 'rb'), as_attachment=True)
 
 
@@ -62,9 +63,8 @@ def m_downloadArr(request):
         pass
     downloadArr = request.POST['downloadArr']
     downloadArr = downloadArr.split(',')
-    fc.createZip(downloadArr)
-    response = FileResponse(open('magazine_archive/static/magazine/temp/magazines.zip', 'rb'), as_attachment=True)
-    return response
+    fc.create_zip(downloadArr)
+    return FileResponse(open('magazine_archive/static/magazine/temp/magazines.zip', 'rb'), as_attachment=True)
 
 
 @login_required(redirect_field_name='')
@@ -75,7 +75,7 @@ def m_admin(request):
     only accessible if logged in
     allows select users to add to the database easily
     '''
-    tableData = fc.getInfo()
+    tableData = fc.get_info()
     if request.method == 'POST':
         if request.POST['type'] == 'file':
             date = request.POST['date']
@@ -83,14 +83,19 @@ def m_admin(request):
             number = request.POST['number']
             data = request.FILES['file']
             if not data.name.endswith('.pdf'):
+                # messages from https://docs.djangoproject.com/en/4.2/ref/contrib/messages/
                 messages.error(request, 'Only PDF files are allowed')
                 return render(request, 'magazine/admin.html', {'results': tableData['result']})
+            if fc.check_record(volume, number):
+                messages.error(request, 'Record already in database')
+                return render(request, 'magazine/admin.html', {'results': tableData['result']})
+            # FileSystemStorage from https://docs.djangoproject.com/en/4.2/ref/files/storage/
             fs = FileSystemStorage(location='magazine_archive/static/magazine/temp/temp_file/')
             fs.save(f'{volume}-{number}.pdf', data)
             fc.insertBLOB(date, volume, number)
             fc.exportBLOB(volume, number, 'magazine_archive/static/magazine/temp/')
             fc.read_pdf_individual(volume, number)
-            tableData = fc.getInfo()
+            tableData = fc.get_info()
         else:
             pass
     return render(request, 'magazine/admin.html', {'results': tableData['result']})
@@ -104,6 +109,7 @@ def m_login(request):
     '''
     if request.method == 'POST':
         email = request.POST['email']
+        # hashlib from https://docs.python.org/3/library/hashlib.html
         password = hashlib.sha512(request.POST['password'].encode()).hexdigest()
         user = authenticate(request, email=email, password=password)
 
@@ -128,13 +134,9 @@ def m_getkeywords(request):
         keywordArr = [keywordArr]
     else:
         keywordArr = keywordArr.split(',')
-    pdfArr = request.POST['pdfArr']
-    try:
-        current = request.POST['current'].split('-')
-    except:
-        pass
 
-    result = fc.getKeywords(keywordArr)
+    result = fc.get_keywords(keywordArr)
+    # JsonResponse from https://docs.djangoproject.com/en/4.2/ref/request-response/
     return JsonResponse({'result': result})
 
 
@@ -145,7 +147,7 @@ def m_downloadTranslated(request):
     downloads translated version of document as plaintext
     '''
     try:
-        os.remove('magazine_archive/static/magazine/temp/temp_file/translated_text.txt')
+        os.remove('magazine_archive/static/magazine/temp/temp_file/translated_text.html')
     except:
         pass
 
@@ -155,10 +157,10 @@ def m_downloadTranslated(request):
 
     translated_text = fc.read_pdf_individual_translate(volume, number, language)
     
-    with open('magazine_archive/static/magazine/temp/temp_file/translated_text.txt', 'w') as temp_file:
+    with open('magazine_archive/static/magazine/temp/temp_file/translated_text.html', 'w', encoding='utf-8') as temp_file:
         temp_file.write(translated_text)
     
-    return FileResponse(open('magazine_archive/static/magazine/temp/temp_file/translated_text.txt', 'rb'), as_attachment=True)
+    return FileResponse(open('magazine_archive/static/magazine/temp/temp_file/translated_text.html', 'rb'), as_attachment=True)
 
 
 def m_forgot_password(request):
@@ -169,11 +171,16 @@ def m_forgot_password(request):
     '''
     if request.method == 'POST':
         email = request.POST['email']
-        user = User.objects.filter(email=email).first()
-        if user:
+        user_exists = fc.check_email(email)
+        if user_exists:
+            user_data = fc.get_login(email)
+            user, created = User.objects.get_or_create(first_name=user_data[1], last_name=user_data[2], email=user_data[3], password=user_data[4])
+            # PasswordResetTokenGenerator from https://www.programcreek.com/python/example/88555/django.contrib.auth.tokens.PasswordResetTokenGenerator
             token_generator = PasswordResetTokenGenerator()
             token = token_generator.make_token(user)
+            # build_absolute_uri from https://docs.djangoproject.com/en/4.2/ref/request-response/
             reset_password_link = request.build_absolute_uri(f'/magazine/reset-password/{user.id}:{token}/')
+            # send_mail from https://docs.djangoproject.com/en/4.2/topics/email/
             send_mail(
                 'Reset your password',
                 f'Click on the following link to reset your password: {reset_password_link}',
@@ -193,7 +200,6 @@ def m_reset_password(request, uid, uidb64, token):
 
     allows user to reset password if token is still valid
     '''
-    print(uid, uidb64, token)
     try:
         user = User.objects.filter(id=int(uid)).first()
     except Exception as e:
@@ -207,11 +213,12 @@ def m_reset_password(request, uid, uidb64, token):
             confirm_password = request.POST['confirm_password']
             if password == confirm_password:
                 password = hashlib.sha512(password.encode()).hexdigest()
-                print(password)
-                fc.set_password(user.email, password)
-                user.set_password(password)
-                user.save()
-                messages.success(request, 'Your password has been reset successfully. You can now login with your new password.')
+                if fc.set_password(user.email, password):
+                    messages.success(request, 'Your password has been reset successfully. You can now login with your new password.')
+                    user.delete()
+                else:
+                    messages.error(request, 'Error setting new password. Token has expired. Please try again.')
+                    return redirect('m_forgot_password')
                 return redirect('m_login')
             else:
                 messages.error(request, 'The passwords you entered do not match.')

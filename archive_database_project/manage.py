@@ -20,21 +20,16 @@ def main():
     execute_from_command_line(sys.argv)
 
 
-def exportData():
-
-    # deleta current file structure
+def export_data():
     for file in os.listdir('magazine_archive/static/magazine/temp'):
         if file in ['temp_img', 'temp_file']:
             for img in os.listdir('magazine_archive/static/magazine/temp/temp_img'):
                 os.remove(f'magazine_archive/static/magazine/temp/temp_img/{img}')
             continue
         os.remove(f'magazine_archive/static/magazine/temp/{file}')
-
-    # recreate from database incase changes
-    
-    fc.exportAll()
+    fc.export_all()
 
 
 if __name__ == '__main__':
-    exportData()
+    export_data()
     main()

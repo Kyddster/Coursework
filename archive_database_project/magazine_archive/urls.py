@@ -5,6 +5,8 @@ from . import views
 def favicon_view(request):
     raise Http404
 
+# re_path from https://docs.djangoproject.com/en/4.2/topics/http/urls/
+
 urlpatterns = [
     path('', views.m_index, name='m_index'),
     path('favicon.ico', favicon_view),
